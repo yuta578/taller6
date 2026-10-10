@@ -1,0 +1,25 @@
+{
+  "name": "nexusdash-render-deploy",
+  "version": "3.0.0",
+  "description": "NexusDash - Continuous Deployment, Feature Flags & Safe Release Engine (Taller 6)",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js",
+    "test": "node --check app.js && node --check configcat.js && node test.js",
+    "docker:build": "docker build -t nexusdash-app .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env nexusdash-app"
+  },
+  "keywords": [
+    "feature-flags",
+    "dark-mode",
+    "dashboard",
+    "render"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@configcat/sdk": "^1.1.0",
+    "configcat-js": "^9.6.1"
+  }
+}
