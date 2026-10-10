@@ -120,7 +120,7 @@
         if (!forceLocalSimulation && sdkKey && sdkKey !== 'TU_CONFIGCAT_SDK_KEY_AQUI' && sdkKey !== '') {
             try {
                 client = window.configcat.getClient(sdkKey, window.configcat.PollingMode.AutoPoll, {
-                    pollIntervalSeconds: 30,
+                    pollIntervalSeconds: 4, // Polling rápido para detectar cambios en vivo desde app.configcat.com
                     logger: window.configcat.createConsoleLogger(window.configcat.LogLevel.Info)
                 });
 
