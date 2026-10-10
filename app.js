@@ -280,15 +280,20 @@ if (typeof window === 'undefined') {
 
             let isFlagActive = false;
 
+            let isCloudFlagActive = true;
             if (ccStatus.isCloud) {
-                // En modo Cloud, consulta la clave remota en ConfigCat
-                // Evaluar con pagosexpressv1 (nombre en ConfigCat) y fallback a pagos-express-v1
-                isFlagActive = await window.ConfigCatService.getValueAsync('pagosexpressv1', false, user);
-                if (!isFlagActive) {
-                    isFlagActive = await window.ConfigCatService.getValueAsync('pagos-express-v1', false, user);
+                // En modo Cloud, verifica si el Feature Flag maestro está encendido en ConfigCat
+                isCloudFlagActive = await window.ConfigCatService.getValueAsync('pagosexpressv1', false, user);
+                if (!isCloudFlagActive) {
+                    isCloudFlagActive = await window.ConfigCatService.getValueAsync('pagos-express-v1', false, user);
                 }
+            }
+
+            // Si ConfigCat Cloud lo tiene apagado (Rollback en la nube), se apaga para todos inmediatamente
+            if (ccStatus.isCloud && !isCloudFlagActive) {
+                isFlagActive = false;
             } else {
-                // En modo Local Overrides / Simulador de Taller 6:
+                // Evaluar según la fase de Rollout o Kill Switch seleccionado en los controles interactivos:
                 switch (state.pagosExpressPhase) {
                     case 'off':
                     case 'kill-switch':
@@ -299,17 +304,17 @@ if (typeof window === 'undefined') {
                         isFlagActive = user.email.endsWith('@nexusdash.dev');
                         break;
                     case 'canary-20':
-                        // Solo cohorte de usuarios con bucket < 20
+                        // Solo cohorte de usuarios con bucket < 20%
                         isFlagActive = bucket < 20;
                         break;
                     case 'ga-100':
                         isFlagActive = true;
                         break;
                     default:
-                        isFlagActive = false;
+                        isFlagActive = ccStatus.isCloud ? isCloudFlagActive : false;
                 }
 
-                if (window.ConfigCatService) {
+                if (window.ConfigCatService && !ccStatus.isCloud) {
                     window.ConfigCatService.setFlagOverride('pagos-express-v1', isFlagActive);
                 }
             }
