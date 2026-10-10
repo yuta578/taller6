@@ -282,7 +282,11 @@ if (typeof window === 'undefined') {
 
             if (ccStatus.isCloud) {
                 // En modo Cloud, consulta la clave remota en ConfigCat
-                isFlagActive = await window.ConfigCatService.getValueAsync('pagos-express-v1', false, user);
+                // Evaluar con pagosexpressv1 (nombre en ConfigCat) y fallback a pagos-express-v1
+                isFlagActive = await window.ConfigCatService.getValueAsync('pagosexpressv1', false, user);
+                if (!isFlagActive) {
+                    isFlagActive = await window.ConfigCatService.getValueAsync('pagos-express-v1', false, user);
+                }
             } else {
                 // En modo Local Overrides / Simulador de Taller 6:
                 switch (state.pagosExpressPhase) {

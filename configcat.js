@@ -211,7 +211,10 @@
             if (isCloud && typeof client.getAllKeysAsync === 'function') {
                 const availableKeys = await client.getAllKeysAsync();
                 if (!availableKeys.includes(flagName)) {
-                    if (flagName === 'pagos-express-v1' && availableKeys.includes('nuevaFuncionalidad')) {
+                    // Mapear automáticamente pagos-express-v1 a pagosexpressv1 si existe en la cuenta
+                    if (flagName === 'pagos-express-v1' && (availableKeys.includes('pagosexpressv1') || !availableKeys.includes('pagos-express-v1'))) {
+                        targetKey = 'pagosexpressv1';
+                    } else if (flagName === 'pagos-express-v1' && availableKeys.includes('nuevaFuncionalidad')) {
                         targetKey = 'nuevaFuncionalidad';
                     } else if (flagName === 'dark_mode_enabled' && availableKeys.includes('isMyFirstFeatureEnabled')) {
                         targetKey = 'isMyFirstFeatureEnabled';
