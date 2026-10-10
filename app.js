@@ -181,7 +181,7 @@ if (typeof window === 'undefined') {
             activeTicket: 'ticket-3',
             inMemoryTheme: 'light',
             currentUser: USERS[0],
-            pagosExpressPhase: localStorage.getItem(STORAGE_PAGOS_PHASE_KEY) || 'off', // 'off' | 'dogfooding' | 'canary-20' | 'ga-100' | 'kill-switch'
+            pagosExpressPhase: localStorage.getItem(STORAGE_PAGOS_PHASE_KEY) || 'ga-100', // 'off' | 'dogfooding' | 'canary-20' | 'ga-100' | 'kill-switch'
             pagosExpressActive: false,
             metrics: {
                 totalOrders: 42,
@@ -278,41 +278,48 @@ if (typeof window === 'undefined') {
             const user = { ...state.currentUser, bucket };
             const ccStatus = window.ConfigCatService ? window.ConfigCatService.getStatus() : { isCloud: false };
 
-            let isFlagActive = false;
-
+            // 1. Leer el Feature Flag maestro de ConfigCat Cloud
+            let isCloudFlagActive = false;
             if (ccStatus.isCloud) {
-                // =============================================================
-                // MODO CLOUD ACTIVO: Quien manda 100% es ConfigCat Web en la nube
-                // =============================================================
-                isFlagActive = await window.ConfigCatService.getValueAsync('pagosexpressv1', false, user);
-                if (typeof isFlagActive !== 'boolean') {
-                    isFlagActive = await window.ConfigCatService.getValueAsync('pagos-express-v1', false, user);
+                isCloudFlagActive = await window.ConfigCatService.getValueAsync('pagosexpressv1', false, user);
+                if (typeof isCloudFlagActive !== 'boolean') {
+                    isCloudFlagActive = await window.ConfigCatService.getValueAsync('pagos-express-v1', false, user);
                 }
             } else {
-                // =============================================================
-                // MODO LOCAL OVERRIDES: Mandan los botones de fases de la UI
-                // =============================================================
+                isCloudFlagActive = true;
+            }
+
+            let isFlagActive = false;
+
+            // 2. Si ConfigCat Cloud lo tiene apagado en la nube (OFF), NADA lo puede forzar (Kill Switch Maestro)
+            if (ccStatus.isCloud && !isCloudFlagActive) {
+                isFlagActive = false;
+            } else {
+                // 3. Si ConfigCat Cloud está encendido (o modo local), los botones de fase aplican su lógica viva:
                 switch (state.pagosExpressPhase) {
                     case 'off':
                     case 'kill-switch':
+                        // Kill Switch / Rollback de emergencia local
                         isFlagActive = false;
                         break;
                     case 'dogfooding':
+                        // Solo cuentas internas @nexusdash.dev
                         isFlagActive = user.email.endsWith('@nexusdash.dev');
                         break;
                     case 'canary-20':
+                        // Solo cohorte menor a 20%
                         isFlagActive = bucket < 20;
                         break;
                     case 'ga-100':
-                        isFlagActive = true;
-                        break;
                     default:
-                        isFlagActive = false;
+                        // 100% de usuarios (gobernado 1:1 por ConfigCat)
+                        isFlagActive = isCloudFlagActive;
+                        break;
                 }
+            }
 
-                if (window.ConfigCatService) {
-                    window.ConfigCatService.setFlagOverride('pagos-express-v1', isFlagActive);
-                }
+            if (window.ConfigCatService && !ccStatus.isCloud) {
+                window.ConfigCatService.setFlagOverride('pagos-express-v1', isFlagActive);
             }
 
             state.pagosExpressActive = isFlagActive;
@@ -320,7 +327,8 @@ if (typeof window === 'undefined') {
                 isFlagActive,
                 phase: state.pagosExpressPhase,
                 bucket,
-                user
+                user,
+                isCloudFlagActive
             };
         }
 
